@@ -225,6 +225,11 @@ void initShader(const char *vname, const char *fname) {
 	uModelViewMat = glGetUniformLocation(program, "modelView");
 	uModelViewProjMat = glGetUniformLocation(program, "modelViewProj");
 
+	/* int borrar = glGetUniformLocation(program, "borrar");
+	 * int borrar = glGetAttribLocation(program, "inTexCoord");
+	 * int borrar = glGetAttribLocation(program, "inPos");
+	 */
+
 	// Creamos los identificadores de los atributos.
 	inPos = glGetAttribLocation(program, "inPos");
 	inColor = glGetAttribLocation(program, "inColor");
@@ -243,22 +248,45 @@ void initShader(const char *vname, const char *fname) {
 
 void initObj() {
 	// Se crea y activa el VAO en el que se almacenará la configuración del objeto.
+	// VBO (atributos, index), VAO.
 	glGenVertexArrays(1, &vao);
 	glBindVertexArray(vao);
+
+	glGenBuffers(1, &posVBO);
+	glGenBuffers(1, &colorVBO);
+	glGenBuffers(1, &normalVBO);
+	glGenBuffers(1, &texCoordVBO);
+
+	/*
+	 * También se puede utilizar buff como único buffer.
+	 * unsigned int buff;
+	 * glGenBuffers(1, &buff);
+	 * 
+	 * glBindBuffer(GL_ARRAY_BUFFER, buff);
+	 * glBufferData(GL_ARRAY_BUFFER, (cubeNVertex * (3+3+3+2)) * sizeof(float) * 
+	 * cubeNTriangleIndex * 3 * sizeof (unsigned int), NULL, GL_STATIC_DRAW);
+	 * glBufferSubData(GL_ARRAY_BUFFER, 3 * cubeNVertex * sizeof(float),
+	 * 3 * cubeNVertex * sizeof(float), cubeVertexColor);
+	 */
 
 	// Creamos y configuramos todos los atributos de la malla.
 	if (inPos != -1)
 	{
-		glGenBuffers(1, &posVBO);
-		glBindBuffer(GL_ARRAY_BUFFER, posVBO);
-		glBufferData(GL_ARRAY_BUFFER, cubeNVertex * sizeof(float) * 3,
-			cubeVertexPos, GL_STATIC_DRAW);
+		// glGenBuffers(1, &posVBO);
+		glBindBuffer(GL_ARRAY_BUFFER, posVBO); // Activación como buffer de atributo.
+		glBufferData(GL_ARRAY_BUFFER, // Objeto para el que se reserva espacio.
+			cubeNVertex * sizeof(float) * 3, // Tamaño en bytes.
+			cubeVertexPos, // Puntero a vértices de la maya.
+			GL_STATIC_DRAW); // Para pintar, no se modificada una vez esté subido.
+
+		// glBufferSubData(GL_ARRAY_BUFFER, 0, cubeNVertex * 3 * sizeof(float), cubeVertexPos);
+
 		glVertexAttribPointer(inPos, 3, GL_FLOAT, GL_FALSE, 0, 0);
 		glEnableVertexAttribArray(inPos);
 	}
 	if (inColor != -1)
 	{
-		glGenBuffers(1, &colorVBO);
+		// glGenBuffers(1, &colorVBO);
 		glBindBuffer(GL_ARRAY_BUFFER, colorVBO);
 		glBufferData(GL_ARRAY_BUFFER, cubeNVertex * sizeof(float) * 3,
 			cubeVertexColor, GL_STATIC_DRAW);
@@ -267,7 +295,7 @@ void initObj() {
 	}
 	if (inNormal != -1)
 	{
-		glGenBuffers(1, &normalVBO);
+		// glGenBuffers(1, &normalVBO);
 		glBindBuffer(GL_ARRAY_BUFFER, normalVBO);
 		glBufferData(GL_ARRAY_BUFFER, cubeNVertex * sizeof(float) * 3,
 			cubeVertexNormal, GL_STATIC_DRAW);
@@ -276,7 +304,7 @@ void initObj() {
 	}
 	if (inTexCoord != -1)
 	{
-		glGenBuffers(1, &texCoordVBO);
+		// glGenBuffers(1, &texCoordVBO);
 		glBindBuffer(GL_ARRAY_BUFFER, texCoordVBO);
 		glBufferData(GL_ARRAY_BUFFER, cubeNVertex * sizeof(float) * 2,
 			cubeVertexTexCoord, GL_STATIC_DRAW);
@@ -376,10 +404,12 @@ void renderFunc() {
 	// Limpia el buffer de color y el buffer de profundidad antes de cada renderizado.
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+	// En caso de ser varios objetos, se utilizan bucles.
 	// Calcula y sube las matrices requeridas por el shader de vértices.
 	mat4 modelView = view * model;
 	mat4 modelViewProj = proj * view * model;
 	mat4 normal = transpose(inverse(modelView));
+
 	if (uModelViewMat != -1)
 		glUniformMatrix4fv(uModelViewMat, 1, GL_FALSE, &(modelView[0][0]));
 	if (uModelViewProjMat != -1)
