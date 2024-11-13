@@ -380,7 +380,15 @@ unsigned int loadTex(const char *fileName) {
 	unsigned int texId;
 	glGenTextures(1, &texId);
 	glBindTexture(GL_TEXTURE_2D, texId);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, (GLvoid*)map);
+
+	// glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, (GLvoid*)map);
+
+	glTexStorage2D(GL_TEXTURE_2D, 1, GL_RGBA8, w, h);
+	glTexSubImage2D(GL_TEXTURE_2D, 0, // Level
+		0,0, // Offset
+		w,h, // Tamaño de datos que subo
+		GL_RGBA, GL_UNSIGNED_BYTE, // Dimensiones y tipo de dato
+		(GLvoid*)map);
 
 	// Libera la memoria de la CPU.
 	delete[] map;
@@ -428,15 +436,15 @@ void renderFunc() {
 	// Activamos las texturas y las enlazamos con el programa activo.
 	if (uColorTex != -1)
 	{
-		glActiveTexture(GL_TEXTURE0);
+		glActiveTexture(GL_TEXTURE0); // Texture Unit 0
 		glBindTexture(GL_TEXTURE_2D, colorTexId);
-		glUniform1i(uColorTex, 0);
+		glUniform1i(uColorTex, 0); // Se sube a pos 0
 	}
 	if (uEmiTex != -1)
 	{
-		glActiveTexture(GL_TEXTURE0 + 1);
+		glActiveTexture(GL_TEXTURE0 + 1); // Texture Unit 1
 		glBindTexture(GL_TEXTURE_2D, emiTexId);
-		glUniform1i(uEmiTex, 1);
+		glUniform1i(uEmiTex, 1); // Se sube a pos 1
 	}
 
 }
