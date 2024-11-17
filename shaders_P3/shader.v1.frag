@@ -1,4 +1,4 @@
-#version 330 core
+#version 420 core
 
 out vec4 outColor;
 
@@ -7,8 +7,8 @@ in vec3 pos;
 in vec3 norm;
 in vec2 texCoord;
 
-uniform sampler2D colorTex;
-uniform sampler2D emiTex;
+layout (binding = 1) uniform sampler2D colorTex;
+layout (binding = 0) uniform sampler2D emiTex;
 
 //Propiedades del objeto
 vec3 Ka;
@@ -19,10 +19,10 @@ float alpha = 5000.0;
 vec3 Ke;
 
 //Propiedades de la luz
-vec3 Ia = vec3 (0.3);
-vec3 Id = vec3 (1.0);
-vec3 Is = vec3 (1.0);
-vec3 lpos = vec3 (0.0); 
+vec3 Ia;
+uniform vec3 Id;
+vec3 Is;
+uniform vec3 lpos;
 
 vec3 shade();
 
@@ -31,7 +31,7 @@ void main()
 	Ka = texture(colorTex, texCoord).rgb;
 	Kd = texture(colorTex, texCoord).rgb;
 	Ke = texture(emiTex, texCoord).rgb;
-	Ks = vec3 (1.0);
+	Ks = vec3(1.0);
 
 	N = normalize (norm);
 	

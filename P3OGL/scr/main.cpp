@@ -24,7 +24,13 @@ mat4 proj = mat4(1.0f);
 mat4 view = mat4(1.0f);
 mat4 model = mat4(1.0f);
 
+vec3 COP = vec3(0.0f, 0.3f, 8.0f);   // pos de la camara
+vec3 LookAt = vec3(0.0f, 0.0f, -30.0f); // donde apunta
+vec3 VUP = vec3(0.0f, 1.0f, 0.0f);   // Vector de orientación hacia arriba
 
+float cameraSpeed = 0.1f;
+float cameraSpeedWS = cameraSpeed * 0.07;
+float rotationSpeed = 1.0f;
 //////////////////////////////////////////////////////////////
 // Variables que nos dan acceso a Objetos OpenGL
 //////////////////////////////////////////////////////////////
@@ -63,6 +69,18 @@ int inColor;
 int inNormal;
 int inTexCoord;
 
+
+
+//Atributos de la luz (apartado 1)
+
+
+vec3 lpos = vec3(-4.0f , 5.0f , 0.0f); // Posición inicial de la luz
+vec3 Il = vec3(1.0f);  // Intensidad inicial de la luz
+GLuint lposLoc; // Identificador para la posición de la luz en el shader
+GLuint IdLoc;   // Identificador para la intensidad de la luz en el shader
+
+float lightSpeed = 0.1f;
+float iC = 0.1f;
 
 //////////////////////////////////////////////////////////////
 // Funciones auxiliares
@@ -109,6 +127,30 @@ int main(int argc, char** argv)
 	destroy();
 
 	return 0;
+}
+
+mat4 createViewMatrix(vec3 CoP, vec3 LookAt, vec3 VUP) {
+
+	vec3 N = normalize(LookAt - CoP);  // Vector que apunta desde CoP hacia LookAt
+	vec3 V = normalize(cross(N, VUP));  // Eje derecha
+	vec3 U = normalize(cross(V, N));    // Eje arriba ajustado
+
+	// Matriz de rotación de la cámara
+
+	mat4 rotation = mat4(1.0f);
+	rotation[0] = vec4(V, 0.0f);  // Eje V como primera fila
+	rotation[1] = vec4(U, 0.0f);  // Eje U como segunda fila
+	rotation[2] = vec4(-N, 0.0f); // -N como tercera fila (cámara mira en la dirección -Z)
+
+
+	mat4 traslacion = mat4(1.0f);
+
+	traslacion[3][0] = -CoP.x;
+	traslacion[3][1] = -CoP.y;
+	traslacion[3][2] = -CoP.z; // Traslación inversa según posición CoP
+
+	// Multiplicamos rotación y traslación para obtener la matriz de vista
+	return rotation * traslacion;
 }
 	
 //////////////////////////////////////////
@@ -160,7 +202,7 @@ void initOGL() {
 	// No tienen que ver con OpenGL.
 	proj = perspective(radians(60.0f), 1.0f, 0.1f, 50.0f);
 	view = mat4(1.0f);
-	view[3].z = -6;
+	view = createViewMatrix(COP , LookAt , VUP);
 
 }
 
@@ -453,6 +495,13 @@ void resizeFunc(int width, int height) {
 	// Ajusta el viewport.
 	glViewport(0, 0, width, height);
 
+
+	// calculamos un aspect ratio muy parecido a la primera practica ,  casteando los int de argumento por floats 
+	float aspectRatio = static_cast<float>(width) / static_cast<float>(height);
+
+	// Actualiza la matriz de proyección con el nuevo aspect ratio.
+	proj = perspective(radians(60.0f), aspectRatio, 0.1f, 50.0f);
+
 	// Planifica un evento de renderizado.
 	glutPostRedisplay();
 }
@@ -469,7 +518,134 @@ void idleFunc(){
 
 }
 
-void keyboardFunc(unsigned char key, int x, int y){}
+
+
+void updateViewMatrix() {
+	view = createViewMatrix(COP, LookAt, VUP);
+
+	// Reciclamos el metodo de la practica 1 , pero modificando el final usando glUniformMatrix4fv
+	glUniformMatrix4fv(uModelViewMat, 1, GL_FALSE, &view[0][0]);
+
+		// Volvemos a hacer una llamada para actualizar el renderizado
+	glutPostRedisplay();
+}
+
+mat4 createRotationMatrix(char axis, float angle) {
+	switch (axis) {
+	
+	case 'X' :
+		return rotate(mat4(1.0f), angle, vec3(1.0f, 0.0f, 0.0f));
+		break;
+
+	case 'Y':
+     return rotate(mat4(1.0f), angle, vec3(0.0f, 1.0f, 0.0f));
+		break;
+
+	case 'Z':
+		return rotate(mat4(1.0f), angle, vec3(0.0f, 0.0f, 1.0f));
+		break;
+
+	default:
+
+		return mat4(1.0f);
+
+	
+	}
+		
+}
+
+
+
+
+void keyboardFunc(unsigned char key, int x, int y){
+
+
+	
+
+	switch (key) {
+
+	case 'w':
+
+		COP += cameraSpeedWS * LookAt;
+		break;
+
+	case 's':
+		COP -= cameraSpeedWS * LookAt;
+		break;
+
+	case 'a':
+		// producto vectorial de los dos vectores de la camara , hallamos el vector correspondiente y lo multiplicamos por la velocidad de la camara
+		COP -= normalize(cross(LookAt, VUP)) * cameraSpeed;
+		break;
+
+	case 'd':
+		// mismo caso que la a , pero en positivo(right)
+		COP += normalize(cross(LookAt, VUP)) * cameraSpeed;
+		break;
+
+	case 'q': // Rotar hacia la izquierda (alrededor del eje Y)
+	{
+		float angle = rotationSpeed * radians(1.0f);
+		mat4 rotation = rotate(mat4(1.0f), angle, vec3(0.0f, 1.0f, 0.0f));
+		LookAt = vec3(rotation * vec4(LookAt - COP, 1.0f)) + COP;
+	}
+	break;
+	case 'e': // Rotar hacia la derecha (alrededor del eje Y)
+	{
+		float angle = -rotationSpeed * radians(1.0f);
+		mat4 rotation = rotate(mat4(1.0f), angle, vec3(0.0f, 1.0f, 0.0f));
+		LookAt = vec3(rotation * vec4(LookAt - COP, 1.0f)) + COP;
+	}
+	break;
+
+
+	//////////////////////////////////// CAMBIOS PARA LA LUZ /////////////////////////////////////
+
+
+
+	//  
+	case 'j': // Mover la luz a la izquierda
+		lpos.x -= lightSpeed;
+		break;
+	case 'l': // Mover la luz a la derecha
+		lpos.x += lightSpeed;
+		break;
+	case 'u': // Mover la luz arriba
+		lpos.y += lightSpeed;
+		break;
+	case 'h': // Mover la luz abajo
+		lpos.y -= lightSpeed;
+		break;
+	case 'k': // Mover la luz hacia atrás
+		lpos.z -= lightSpeed;
+		break;
+	case 'i': // Mover la luz hacia adelante
+		lpos.z += lightSpeed;
+		break;
+	case 'o': // Aumentar intensidad
+		Il += vec3(iC);
+		break;
+	case 'p': // Disminuir intensidad
+		Il -= vec3(iC);
+		break;
+
+	}
+
+	updateViewMatrix();
+
+
+	// llamamos al shader para actualizar los valores
+
+	// Subir datos actualizados de la luz al shader
+	glUniform3fv(lposLoc, 1, &lpos[0]);
+	glUniform3fv(IdLoc, 1, &Il[0]);
+
+	// Solicitar un nuevo renderizado
+	glutPostRedisplay();
+}
+
+
+
 void mouseFunc(int button, int state, int x, int y){}
 
 
