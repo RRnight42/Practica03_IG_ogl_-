@@ -12,6 +12,7 @@
 
 #include <iostream>
 
+
 using namespace std;
 using namespace glm;
 
@@ -23,6 +24,8 @@ using namespace glm;
 mat4 proj = mat4(1.0f);
 mat4 view = mat4(1.0f);
 mat4 model = mat4(1.0f);
+//segundo cubo
+mat4 model2 = mat4(1.0f);
 
 vec3 COP = vec3(0.0f, 0.3f, 8.0f);   // pos de la camara
 vec3 LookAt = vec3(0.0f, 0.0f, -30.0f); // donde apunta
@@ -74,7 +77,7 @@ int inTexCoord;
 //Atributos de la luz (apartado 1)
 
 
-vec3 lpos = vec3(-4.0f , 5.0f , 0.0f); // Posición inicial de la luz
+vec3 lpos = vec3(0.0f , 0.0f , 0.0f); // Posición inicial de la luz
 vec3 Il = vec3(1.0f);  // Intensidad inicial de la luz
 GLuint lposLoc; // Identificador para la posición de la luz en el shader
 GLuint IdLoc;   // Identificador para la intensidad de la luz en el shader
@@ -119,6 +122,11 @@ int main(int argc, char** argv)
 	initContext(argc, argv);
 	initOGL();
 	initShader("../shaders_P3/shader.v1.vert", "../shaders_P3/shader.v1.frag");
+	//
+	
+	//
+
+
 	initObj();
 
 	// Se añade el bucle de eventos del glut.
@@ -286,6 +294,10 @@ void initShader(const char *vname, const char *fname) {
 	uEmiTex = glGetUniformLocation(program, "emiTex");
 
 
+	// Identificadores de la luz
+	lposLoc = glGetUniformLocation(program, "lpos");
+	IdLoc = glGetUniformLocation(program, "Id");
+
 }
 
 void initObj() {
@@ -363,7 +375,7 @@ void initObj() {
 
 	// Inicializamos la matriz model de nuestro objeto.
 	model = mat4(1.0f);
-
+	model2 = mat4(1.0f);
 	// Creamos dos texturas, una del color y otra emisiva.
 	colorTexId = loadTex("../img/color2.png");
 	emiTexId = loadTex("../img/emissive.png");
@@ -449,7 +461,7 @@ unsigned int loadTex(const char *fileName) {
 	return texId;
 
 }
-
+/**
 void renderFunc() {
 	// Limpia el buffer de color y el buffer de profundidad antes de cada renderizado.
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -490,6 +502,52 @@ void renderFunc() {
 	}
 
 }
+*/
+void renderFunc() {
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+	// Renderizar el primer cubo
+	mat4 modelView = view * model;
+	mat4 modelViewProj = proj * modelView;
+	mat4 normal = transpose(inverse(modelView));
+
+	glUniformMatrix4fv(uModelViewMat, 1, GL_FALSE, &(modelView[0][0]));
+	glUniformMatrix4fv(uModelViewProjMat, 1, GL_FALSE, &(modelViewProj[0][0]));
+	glUniformMatrix4fv(uNormalMat, 1, GL_FALSE, &(normal[0][0]));
+
+	glBindVertexArray(vao);
+	glDrawElements(GL_TRIANGLES, cubeNTriangleIndex * 3, GL_UNSIGNED_INT, (void*)0);
+
+	// Renderizar el segundo cubo
+	modelView = view * model2;
+	modelViewProj = proj * modelView;
+	normal = transpose(inverse(modelView));
+
+	glUniformMatrix4fv(uModelViewMat, 1, GL_FALSE, &(modelView[0][0]));
+	glUniformMatrix4fv(uModelViewProjMat, 1, GL_FALSE, &(modelViewProj[0][0]));
+	glUniformMatrix4fv(uNormalMat, 1, GL_FALSE, &(normal[0][0]));
+
+	glDrawElements(GL_TRIANGLES, cubeNTriangleIndex * 3, GL_UNSIGNED_INT, (void*)0);
+
+	glutSwapBuffers();
+
+	// Activamos las texturas y las enlazamos con el programa activo.
+	if (uColorTex != -1)
+	{
+		glActiveTexture(GL_TEXTURE0); // Texture Unit 0
+		glBindTexture(GL_TEXTURE_2D, colorTexId);
+		glUniform1i(uColorTex, 0); // Se sube a pos 0
+		
+	}
+	if (uEmiTex != -1)
+	{
+		glActiveTexture(GL_TEXTURE0 + 1); // Texture Unit 1
+		glBindTexture(GL_TEXTURE_2D, emiTexId);
+		glUniform1i(uEmiTex, 1);// Se sube a pos 1
+		
+	}
+}
+
 
 void resizeFunc(int width, int height) {
 	// Ajusta el viewport.
@@ -505,10 +563,11 @@ void resizeFunc(int width, int height) {
 	// Planifica un evento de renderizado.
 	glutPostRedisplay();
 }
-
+/**
 void idleFunc(){
 	// Modificamos la matriz model.
 	model = mat4(1.0f);
+	model2 = mat4(1.0f);
 	static float angle = 0.0f;
 	angle = (angle > 3.141592f * 2.0f) ? 0 : angle + 0.01f;
 	model = rotate(model, angle, vec3(1.0f, 1.0f, 0.0f));
@@ -516,6 +575,30 @@ void idleFunc(){
 	// Lanzamos un evento de renderizado.
 	glutPostRedisplay();
 
+}*/
+
+void idleFunc() {
+	static float angle = 0.0f;
+	static float orbitAngle = 0.0f;
+
+	angle += 0.01f; // Velocidad de rotación sobre el eje Y
+	orbitAngle += 0.005f; // Velocidad de órbita alrededor del primer cubo
+
+	if (angle > 3.141592f * 2.0f) angle -= 3.141592f * 2.0f;
+	if (orbitAngle > 3.141592f * 2.0f) orbitAngle -= 3.141592f * 2.0f;
+
+	// Rotación del primer cubo sobre sí mismo
+	model = mat4(1.0f);
+	model = rotate(model, angle, vec3(1.0f, 1.0f, 0.0f));
+
+	// Transformación del segundo cubo
+	model2 = mat4(1.0f);
+	// Traslación para la órbita
+	model2 = translate(model2, vec3(cos(orbitAngle) * 5.0f, 0.0f, sin(orbitAngle) * 5.0f));
+	// Rotación sobre su propio eje Y
+	model2 = rotate(model2, angle, vec3(0.0f, 1.0f, 0.0f));
+
+	glutPostRedisplay();
 }
 
 
@@ -628,7 +711,10 @@ void keyboardFunc(unsigned char key, int x, int y){
 	case 'p': // Disminuir intensidad
 		Il -= vec3(iC);
 		break;
-
+	case 'r':
+		//devolver la luz al origen
+		lpos = vec3(0);
+		break;
 	}
 
 	updateViewMatrix();
@@ -637,6 +723,8 @@ void keyboardFunc(unsigned char key, int x, int y){
 	// llamamos al shader para actualizar los valores
 
 	// Subir datos actualizados de la luz al shader
+	vec3 aux = vec3(view * vec4(lpos,1.0));
+
 	glUniform3fv(lposLoc, 1, &lpos[0]);
 	glUniform3fv(IdLoc, 1, &Il[0]);
 

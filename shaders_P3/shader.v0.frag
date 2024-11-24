@@ -7,8 +7,9 @@ in vec3 pos;
 in vec3 norm;
 in vec2 texCoord;
 
-uniform sampler2D colorTex;
-uniform sampler2D emiTex;
+//uniform sampler2D colorTex;
+
+//uniform sampler2D emiTex;
 
 //Propiedades del objeto
 vec3 Ka;
