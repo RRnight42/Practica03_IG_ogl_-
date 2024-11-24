@@ -686,23 +686,23 @@ void keyboardFunc(unsigned char key, int x, int y){
 
 
 
-	//  
-	case 'j': // Mover la luz a la izquierda
+	//  La luz se puede controlar con el teclado numerico
+	case '4': // Mover la luz a la izquierda
 		lpos.x -= lightSpeed;
 		break;
-	case 'l': // Mover la luz a la derecha
+	case '6': // Mover la luz a la derecha
 		lpos.x += lightSpeed;
 		break;
-	case 'u': // Mover la luz arriba
+	case '8': // Mover la luz arriba
 		lpos.y += lightSpeed;
 		break;
-	case 'h': // Mover la luz abajo
+	case '2': // Mover la luz abajo
 		lpos.y -= lightSpeed;
 		break;
-	case 'k': // Mover la luz hacia atrás
+	case '1': // Mover la luz hacia atrás
 		lpos.z -= lightSpeed;
 		break;
-	case 'i': // Mover la luz hacia adelante
+	case '7': // Mover la luz hacia adelante
 		lpos.z += lightSpeed;
 		break;
 	case 'o': // Aumentar intensidad
@@ -711,7 +711,7 @@ void keyboardFunc(unsigned char key, int x, int y){
 	case 'p': // Disminuir intensidad
 		Il -= vec3(iC);
 		break;
-	case 'r':
+	case '5':
 		//devolver la luz al origen
 		lpos = vec3(0);
 		break;
