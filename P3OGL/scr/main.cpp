@@ -53,15 +53,18 @@ unsigned int posVBO;
 unsigned int colorVBO;
 unsigned int normalVBO;
 unsigned int texCoordVBO;
+unsigned int tangentVBO;
 unsigned int triangleIndexVBO;
 
 // Texturas
 unsigned int colorTexId;
 unsigned int emiTexId;
+unsigned int bumpId;
 
 // Texturas uniformes
 int uColorTex;
 int uEmiTex;
+int bumpMapping;
 
 // Variables uniformes
 int uModelViewMat[3];
@@ -228,12 +231,14 @@ void destroy() {
 	 glDeleteBuffers(1, &colorVBO);
 	 glDeleteBuffers(1, &normalVBO);
 	 glDeleteBuffers(1, &texCoordVBO);
+	 glDeleteBuffers(1, &tangentVBO);
 	glDeleteBuffers(1, &triangleIndexVBO);
 	glDeleteVertexArrays(1, &vao);
 
 	// Liberamos los recursos de las texturas de color y emisiva.
 	glDeleteTextures(1, &colorTexId);
 	glDeleteTextures(1, &emiTexId);
+	glDeleteTextures(1, &bumpId);
 
 }
 
@@ -296,6 +301,7 @@ void initObj() {
 	glGenBuffers(1, &colorVBO);
 	glGenBuffers(1, &normalVBO);
 	glGenBuffers(1, &texCoordVBO);
+	glGenBuffers(1, &tangentVBO);
 
 	/*
 	 * También se puede utilizar buff como único buffer.
@@ -346,6 +352,15 @@ void initObj() {
 		glVertexAttribPointer(3, 2, GL_FLOAT, GL_FALSE, 0, 0);
 		glEnableVertexAttribArray(3);
 	
+		// PENDIENTE DE MIRAR
+
+		// glGenBuffers(1, &tangentVBO);
+		glBindBuffer(GL_ARRAY_BUFFER, tangentVBO);
+		glBufferData(GL_ARRAY_BUFFER, cubeNVertex * sizeof(float) * 3,
+			cubeVertexTangent, GL_STATIC_DRAW);
+		glVertexAttribPointer(4, 3, GL_FLOAT, GL_FALSE, 0, 0);
+		glEnableVertexAttribArray(4);
+
 
 	// Creamos la lista de índices.
 	glGenBuffers(1, &triangleIndexVBO);
@@ -357,10 +372,11 @@ void initObj() {
 	// Inicializamos la matriz model de nuestro objeto.
 	model = mat4(1.0f);
 	model2 = mat4(1.0f);
-	model3 = mat4(1.0f);
+	
 	// Creamos dos texturas, una del color y otra emisiva.
 	colorTexId = loadTex("../img/color2.png");
 	emiTexId = loadTex("../img/emissive.png");
+	bumpId = loadTex("../img/normal.png");
 }
 
 GLuint loadShader(const char *fileName, GLenum type) {
@@ -503,6 +519,9 @@ void renderFunc() {
 	glActiveTexture(GL_TEXTURE0 + 1); // Texture Unit 1
 	glBindTexture(GL_TEXTURE_2D, emiTexId);
 
+	glActiveTexture(GL_TEXTURE0 + 2); // Texture Unit 2
+	glBindTexture(GL_TEXTURE_2D, bumpId);
+
 	// subimos informacion de las luces
 
 	vec3 aux = vec3(view * vec4(lpos,1));
@@ -563,13 +582,11 @@ void renderFunc() {
 	glUniform3fv(lposLoc[2], 1, &(aux[0]));
 	glUniform3fv(IdLoc[2], 1, &(Il[0]));
 
-	modelView =  view * model3 ;
-	modelViewProj = proj * modelView;
-	normal = transpose(inverse(modelView));
+	
+	modelViewProj = proj * view;
 
-	glUniformMatrix4fv(uModelViewMat[2], 1, GL_FALSE, &(modelView[0][0]));
 	glUniformMatrix4fv(uModelViewProjMat[2], 1, GL_FALSE, &(modelViewProj[0][0]));
-	glUniformMatrix4fv(uNormalMat[2], 1, GL_FALSE, &(normal[0][0]));
+
 
 	glDrawElements(GL_TRIANGLES, cubeNTriangleIndex * 3, GL_UNSIGNED_INT, (void*)0);
 	
@@ -628,13 +645,7 @@ void idleFunc() {
 	// Rotación sobre su propio eje Y
 	model2 = rotate(model2, angle, vec3(0.0f, 1.0f, 0.0f));
 
-	//cubo que no gira , y sirve de referencia para el punto de la luz
 
-	
-
-	model3[3][0] = lpos.x;
-	model3[3][1] = lpos.y;
-	model3[3][2] = lpos.z;
 
 	glutPostRedisplay();
 }
