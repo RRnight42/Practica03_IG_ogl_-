@@ -7,8 +7,8 @@ in vec3 pos;
 in vec3 norm;
 in vec2 texCoord;
 
-layout (binding = 1) uniform sampler2D colorTex;
-layout (binding = 0) uniform sampler2D emiTex;
+layout (binding = 0) uniform sampler2D colorTex;
+layout (binding = 1) uniform sampler2D emiTex;
 
 //Propiedades del objeto
 vec3 Ka;
@@ -35,7 +35,8 @@ void main()
 
 	N = normalize (norm);
 	
-	outColor = vec4(shade(), 1.0);   
+	outColor = vec4(shade(), 1.0);  
+    //outColor = Kd.rgbb;
 }
 
 vec3 shade()

@@ -27,6 +27,8 @@ mat4 model = mat4(1.0f);
 //segundo cubo
 mat4 model2 = mat4(1.0f);
 
+mat4 model3 = mat4(1.0f);
+
 vec3 COP = vec3(0.0f, 0.3f, 8.0f);   // pos de la camara
 vec3 LookAt = vec3(0.0f, 0.0f, -30.0f); // donde apunta
 vec3 VUP = vec3(0.0f, 1.0f, 0.0f);   // Vector de orientación hacia arriba
@@ -38,10 +40,10 @@ float rotationSpeed = 1.0f;
 // Variables que nos dan acceso a Objetos OpenGL
 //////////////////////////////////////////////////////////////
 
-// Variables globales.
-unsigned int vshader;
-unsigned int fshader;
-unsigned int program;
+// Variables globales. Un shader diferente para cada cubo
+unsigned int vshader[3];
+unsigned int fshader[3];
+unsigned int program[3];
 
 //VAO
 unsigned int vao;
@@ -62,25 +64,21 @@ int uColorTex;
 int uEmiTex;
 
 // Variables uniformes
-int uModelViewMat;
-int uModelViewProjMat;
-int uNormalMat;
+int uModelViewMat[3];
+int uModelViewProjMat[3];
+int uNormalMat[3];
 
-// Atributos
-int inPos;
-int inColor;
-int inNormal;
-int inTexCoord;
+
 
 
 
 //Atributos de la luz (apartado 1)
 
 
-vec3 lpos = vec3(0.0f , 0.0f , 0.0f); // Posición inicial de la luz
+vec3 lpos = vec3(0.0f, 5.0f, 0.0f); // Posición inicial de la luz
 vec3 Il = vec3(1.0f);  // Intensidad inicial de la luz
-GLuint lposLoc; // Identificador para la posición de la luz en el shader
-GLuint IdLoc;   // Identificador para la intensidad de la luz en el shader
+int lposLoc[3]; // Identificador para la posición de la luz en el shader
+int IdLoc[3];   // Identificador para la intensidad de la luz en el shader
 
 float lightSpeed = 0.1f;
 float iC = 0.1f;
@@ -100,7 +98,7 @@ void mouseFunc(int button, int state, int x, int y);
 //Funciones de inicialización y destrucción
 void initContext(int argc, char** argv);
 void initOGL();
-void initShader(const char *vname, const char *fname);
+void initShader(const char *vname, const char *fname , unsigned int idx);
 void initObj();
 void destroy();
 
@@ -121,7 +119,9 @@ int main(int argc, char** argv)
 
 	initContext(argc, argv);
 	initOGL();
-	initShader("../shaders_P3/shader.v1.vert", "../shaders_P3/shader.v1.frag");
+	initShader("../shaders_P3/shader.v1.vert", "../shaders_P3/shader.v1.frag" , 0);
+	initShader("../shaders_P3/shader.v0.vert", "../shaders_P3/shader.v0.frag", 1);
+	initShader("../shaders_P3/shader.v2.vert", "../shaders_P3/shader.v2.frag", 2);
 	//
 	
 	//
@@ -166,7 +166,7 @@ mat4 createViewMatrix(vec3 CoP, vec3 LookAt, vec3 VUP) {
 void initContext(int argc, char** argv) {
 	// Inicializamos el contexto, definiendo la versión de OpenGL y el tipo de perfil a utilizar.
 	glutInit(&argc, argv);
-	glutInitContextVersion(3, 3);
+	glutInitContextVersion(4, 2);
 	glutInitContextProfile(GLUT_CORE_PROFILE);
 
 	// Creamos la ventana indicando el tipo de buffer, el formato de color y el uso de buffer de profundidad.
@@ -216,17 +216,18 @@ void initOGL() {
 
 void destroy() {
 	// Liberamos los recursos utilizados por el programa.
-	glDetachShader(program, vshader);
-	glDetachShader(program, fshader);
-	glDeleteShader(vshader);
-	glDeleteShader(fshader);
-	glDeleteProgram(program);
+	// BUCLE CON I PARA EL VSHADER Y FSHADER
+	//glDetachShader(program, vshader);
+	//glDetachShader(program, fshader);
+	//glDeleteShader(vshader);
+	//glDeleteShader(fshader);
+	//glDeleteProgram(program);
 
 	// Liberamos los recursos del VAO y VBOs.
-	if (inPos != -1) glDeleteBuffers(1, &posVBO);
-	if (inColor != -1) glDeleteBuffers(1, &colorVBO);
-	if (inNormal != -1) glDeleteBuffers(1, &normalVBO);
-	if (inTexCoord != -1) glDeleteBuffers(1, &texCoordVBO);
+	 glDeleteBuffers(1, &posVBO);
+	 glDeleteBuffers(1, &colorVBO);
+	 glDeleteBuffers(1, &normalVBO);
+	 glDeleteBuffers(1, &texCoordVBO);
 	glDeleteBuffers(1, &triangleIndexVBO);
 	glDeleteVertexArrays(1, &vao);
 
@@ -236,67 +237,52 @@ void destroy() {
 
 }
 
-void initShader(const char *vname, const char *fname) {
+void initShader(const char *vname, const char *fname, unsigned int idx) {
 	// Creamos un shader de vértices y otro de fragmentos.
-	vshader = loadShader(vname, GL_VERTEX_SHADER);
-	fshader = loadShader(fname, GL_FRAGMENT_SHADER);
+	vshader[idx] = loadShader(vname, GL_VERTEX_SHADER);
+	fshader[idx] = loadShader(fname, GL_FRAGMENT_SHADER);
 
 	// Enlazamos los dos shaders en un mismo programa.
-	program = glCreateProgram();
-	glAttachShader(program, vshader);
-	glAttachShader(program, fshader);
-	glLinkProgram(program);
+	program[idx] = glCreateProgram();
+	glAttachShader(program[idx], vshader[idx]);
+	glAttachShader(program[idx], fshader[idx]);
+	glLinkProgram(program[idx]);
 
 	// Comprobamos los errores de la fase de enlazado.
 	int linked;
-	glGetProgramiv(program, GL_LINK_STATUS, &linked);
+	glGetProgramiv(program[idx], GL_LINK_STATUS, &linked);
 	if (!linked)
 	{
 		//Calculamos una cadena de error
 		GLint logLen;
-		glGetProgramiv(program, GL_INFO_LOG_LENGTH, &logLen);
+		glGetProgramiv(program[idx], GL_INFO_LOG_LENGTH, &logLen);
 		char* logString = new char[logLen];
-		glGetProgramInfoLog(program, logLen, NULL, logString);
+		glGetProgramInfoLog(program[idx], logLen, NULL, logString);
 		std::cout << "Error: " << logString << std::endl;
 		delete[] logString;
-		glDeleteProgram(program);
-		program = 0;
+		glDeleteProgram(program[idx]);
+		program[idx] = 0;
 		exit(-1);
 	}
 
-	// Asignamos identificadores a los atributos del programa, antes de enlazarlo.
-	glBindAttribLocation(program, 0, "inPos");
-	glBindAttribLocation(program, 1, "inColor");
-	glBindAttribLocation(program, 2, "inNormal");
-	glBindAttribLocation(program, 3, "inTexCoord");
+	
 
 	// Creamos los identificadores de las variables uniformes.
-	uNormalMat = glGetUniformLocation(program, "normal");
-	uModelViewMat = glGetUniformLocation(program, "modelView");
-	uModelViewProjMat = glGetUniformLocation(program, "modelViewProj");
+	uNormalMat[idx] = glGetUniformLocation(program[idx], "normal");
+	uModelViewMat[idx] = glGetUniformLocation(program[idx], "modelView");
+	uModelViewProjMat[idx] = glGetUniformLocation(program[idx], "modelViewProj");
 
 	/* int borrar = glGetUniformLocation(program, "borrar");
 	 * int borrar = glGetAttribLocation(program, "inTexCoord");
 	 * int borrar = glGetAttribLocation(program, "inPos");
 	 */
 
-	// Creamos los identificadores de los atributos.
-	inPos = glGetAttribLocation(program, "inPos");
-	inColor = glGetAttribLocation(program, "inColor");
-	inNormal = glGetAttribLocation(program, "inNormal");
-	inTexCoord = glGetAttribLocation(program, "inTexCoord");
 
-	// Este código activa y desactiva el programa.
-	glUseProgram(program);
-
-	// Creamos los identificadores de las texturas de color y emisiva.
-	uColorTex = glGetUniformLocation(program, "colorTex");
-	uEmiTex = glGetUniformLocation(program, "emiTex");
 
 
 	// Identificadores de la luz
-	lposLoc = glGetUniformLocation(program, "lpos");
-	IdLoc = glGetUniformLocation(program, "Id");
+	lposLoc[idx] = glGetUniformLocation(program[idx], "lpos");
+	IdLoc[idx] = glGetUniformLocation(program[idx], "Id");
 
 }
 
@@ -324,8 +310,7 @@ void initObj() {
 	 */
 
 	// Creamos y configuramos todos los atributos de la malla.
-	if (inPos != -1)
-	{
+	
 		// glGenBuffers(1, &posVBO);
 		glBindBuffer(GL_ARRAY_BUFFER, posVBO); // Activación como buffer de atributo.
 		glBufferData(GL_ARRAY_BUFFER, // Objeto para el que se reserva espacio.
@@ -335,36 +320,32 @@ void initObj() {
 
 		// glBufferSubData(GL_ARRAY_BUFFER, 0, cubeNVertex * 3 * sizeof(float), cubeVertexPos);
 
-		glVertexAttribPointer(inPos, 3, GL_FLOAT, GL_FALSE, 0, 0);
-		glEnableVertexAttribArray(inPos);
-	}
-	if (inColor != -1)
-	{
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+		glEnableVertexAttribArray(0);
+	
+
 		// glGenBuffers(1, &colorVBO);
 		glBindBuffer(GL_ARRAY_BUFFER, colorVBO);
 		glBufferData(GL_ARRAY_BUFFER, cubeNVertex * sizeof(float) * 3,
 			cubeVertexColor, GL_STATIC_DRAW);
-		glVertexAttribPointer(inColor, 3, GL_FLOAT, GL_FALSE, 0, 0);
-		glEnableVertexAttribArray(inColor);
-	}
-	if (inNormal != -1)
-	{
+		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, 0);
+		glEnableVertexAttribArray(1);
+	
+	
 		// glGenBuffers(1, &normalVBO);
 		glBindBuffer(GL_ARRAY_BUFFER, normalVBO);
 		glBufferData(GL_ARRAY_BUFFER, cubeNVertex * sizeof(float) * 3,
 			cubeVertexNormal, GL_STATIC_DRAW);
-		glVertexAttribPointer(inNormal, 3, GL_FLOAT, GL_FALSE, 0, 0);
-		glEnableVertexAttribArray(inNormal);
-	}
-	if (inTexCoord != -1)
-	{
+		glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 0, 0);
+		glEnableVertexAttribArray(2);
+	
 		// glGenBuffers(1, &texCoordVBO);
 		glBindBuffer(GL_ARRAY_BUFFER, texCoordVBO);
 		glBufferData(GL_ARRAY_BUFFER, cubeNVertex * sizeof(float) * 2,
 			cubeVertexTexCoord, GL_STATIC_DRAW);
-		glVertexAttribPointer(inTexCoord, 2, GL_FLOAT, GL_FALSE, 0, 0);
-		glEnableVertexAttribArray(inTexCoord);
-	}
+		glVertexAttribPointer(3, 2, GL_FLOAT, GL_FALSE, 0, 0);
+		glEnableVertexAttribArray(3);
+	
 
 	// Creamos la lista de índices.
 	glGenBuffers(1, &triangleIndexVBO);
@@ -376,6 +357,7 @@ void initObj() {
 	// Inicializamos la matriz model de nuestro objeto.
 	model = mat4(1.0f);
 	model2 = mat4(1.0f);
+	model3 = mat4(1.0f);
 	// Creamos dos texturas, una del color y otra emisiva.
 	colorTexId = loadTex("../img/color2.png");
 	emiTexId = loadTex("../img/emissive.png");
@@ -504,48 +486,96 @@ void renderFunc() {
 }
 */
 void renderFunc() {
+
+	
+
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	// Renderizar el primer cubo
-	mat4 modelView = view * model;
+
+	glUseProgram(program[0]);
+
+	//activamos las texturas DESPUES de activar el programa
+
+	glActiveTexture(GL_TEXTURE0); // Texture Unit 0
+	glBindTexture(GL_TEXTURE_2D, colorTexId);
+
+	glActiveTexture(GL_TEXTURE0 + 1); // Texture Unit 1
+	glBindTexture(GL_TEXTURE_2D, emiTexId);
+
+	// subimos informacion de las luces
+
+	vec3 aux = vec3(view * vec4(lpos,1));
+	
+	glUniform3fv(lposLoc[0], 1 ,&(aux[0]));
+	glUniform3fv(IdLoc[0], 1, &(Il[0]));
+
+
+
+	// creamos las matrices 
+	
+
+	mat4 modelView =  view * model;
 	mat4 modelViewProj = proj * modelView;
 	mat4 normal = transpose(inverse(modelView));
 
-	glUniformMatrix4fv(uModelViewMat, 1, GL_FALSE, &(modelView[0][0]));
-	glUniformMatrix4fv(uModelViewProjMat, 1, GL_FALSE, &(modelViewProj[0][0]));
-	glUniformMatrix4fv(uNormalMat, 1, GL_FALSE, &(normal[0][0]));
+
+
+	// las subimos al programa de renderizado del primer cubo
+
+	glUniformMatrix4fv(uModelViewMat[0], 1, GL_FALSE, &(modelView[0][0]));
+	glUniformMatrix4fv(uModelViewProjMat[0], 1, GL_FALSE, &(modelViewProj[0][0]));
+	glUniformMatrix4fv(uNormalMat[0], 1, GL_FALSE, &(normal[0][0]));
 
 	glBindVertexArray(vao);
 	glDrawElements(GL_TRIANGLES, cubeNTriangleIndex * 3, GL_UNSIGNED_INT, (void*)0);
 
+	
+
+
 	// Renderizar el segundo cubo
+
+	glUseProgram(program[1]);
+
+
+
+	// subir informacion de las luces para el segundo cubo
+	
+    glUniform3fv(lposLoc[1], 1, &(aux[0]));
+	glUniform3fv(IdLoc[1], 1, &(Il[0]));
+	
 	modelView = view * model2;
 	modelViewProj = proj * modelView;
 	normal = transpose(inverse(modelView));
 
-	glUniformMatrix4fv(uModelViewMat, 1, GL_FALSE, &(modelView[0][0]));
-	glUniformMatrix4fv(uModelViewProjMat, 1, GL_FALSE, &(modelViewProj[0][0]));
-	glUniformMatrix4fv(uNormalMat, 1, GL_FALSE, &(normal[0][0]));
+	glUniformMatrix4fv(uModelViewMat[1], 1, GL_FALSE, &(modelView[0][0]));
+	glUniformMatrix4fv(uModelViewProjMat[1], 1, GL_FALSE, &(modelViewProj[0][0]));
+	glUniformMatrix4fv(uNormalMat[1], 1, GL_FALSE, &(normal[0][0]));
 
 	glDrawElements(GL_TRIANGLES, cubeNTriangleIndex * 3, GL_UNSIGNED_INT, (void*)0);
 
+
+// Activamos las texturas y las enlazamos con el programa activo.
+
+
+	glUseProgram(program[2]);
+	
+	glUniform3fv(lposLoc[2], 1, &(aux[0]));
+	glUniform3fv(IdLoc[2], 1, &(Il[0]));
+
+	modelView =  view * model3 ;
+	modelViewProj = proj * modelView;
+	normal = transpose(inverse(modelView));
+
+	glUniformMatrix4fv(uModelViewMat[2], 1, GL_FALSE, &(modelView[0][0]));
+	glUniformMatrix4fv(uModelViewProjMat[2], 1, GL_FALSE, &(modelViewProj[0][0]));
+	glUniformMatrix4fv(uNormalMat[2], 1, GL_FALSE, &(normal[0][0]));
+
+	glDrawElements(GL_TRIANGLES, cubeNTriangleIndex * 3, GL_UNSIGNED_INT, (void*)0);
+	
 	glutSwapBuffers();
 
-	// Activamos las texturas y las enlazamos con el programa activo.
-	if (uColorTex != -1)
-	{
-		glActiveTexture(GL_TEXTURE0); // Texture Unit 0
-		glBindTexture(GL_TEXTURE_2D, colorTexId);
-		glUniform1i(uColorTex, 0); // Se sube a pos 0
-		
-	}
-	if (uEmiTex != -1)
-	{
-		glActiveTexture(GL_TEXTURE0 + 1); // Texture Unit 1
-		glBindTexture(GL_TEXTURE_2D, emiTexId);
-		glUniform1i(uEmiTex, 1);// Se sube a pos 1
-		
-	}
+	
 }
 
 
@@ -598,20 +628,20 @@ void idleFunc() {
 	// Rotación sobre su propio eje Y
 	model2 = rotate(model2, angle, vec3(0.0f, 1.0f, 0.0f));
 
+	//cubo que no gira , y sirve de referencia para el punto de la luz
+
+	
+
+	model3[3][0] = lpos.x;
+	model3[3][1] = lpos.y;
+	model3[3][2] = lpos.z;
+
 	glutPostRedisplay();
 }
 
 
 
-void updateViewMatrix() {
-	view = createViewMatrix(COP, LookAt, VUP);
 
-	// Reciclamos el metodo de la practica 1 , pero modificando el final usando glUniformMatrix4fv
-	glUniformMatrix4fv(uModelViewMat, 1, GL_FALSE, &view[0][0]);
-
-		// Volvemos a hacer una llamada para actualizar el renderizado
-	glutPostRedisplay();
-}
 
 mat4 createRotationMatrix(char axis, float angle) {
 	switch (axis) {
@@ -717,16 +747,13 @@ void keyboardFunc(unsigned char key, int x, int y){
 		break;
 	}
 
-	updateViewMatrix();
+	view = createViewMatrix(COP, LookAt, VUP);
 
 
-	// llamamos al shader para actualizar los valores
+	
+	
 
-	// Subir datos actualizados de la luz al shader
-	vec3 aux = vec3(view * vec4(lpos,1.0));
 
-	glUniform3fv(lposLoc, 1, &lpos[0]);
-	glUniform3fv(IdLoc, 1, &Il[0]);
 
 	// Solicitar un nuevo renderizado
 	glutPostRedisplay();

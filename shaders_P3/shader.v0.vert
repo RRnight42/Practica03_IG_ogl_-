@@ -1,4 +1,4 @@
-#version 330 core
+#version 420 core
 
 // Layout (location=x) indica pos a procesador.
 layout (location=0) in vec3 inPos;	

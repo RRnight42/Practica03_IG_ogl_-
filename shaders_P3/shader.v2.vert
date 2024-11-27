@@ -17,9 +17,9 @@ out vec2 texCoord;
 void main()
 {
 	color = inColor;
-	texCoord = inTexCoord;
+	texCoord = inTexCoord * 0.1;
 	norm = (normal * vec4(inNormal, 0.0)).xyz;
 	pos = (modelView * vec4(inPos, 1.0)).xyz;
 	
-	gl_Position =  modelViewProj * vec4 (inPos,1.0);
+	gl_Position =  modelViewProj * vec4 (inPos * 0.3,1.0);
 }

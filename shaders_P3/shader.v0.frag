@@ -1,4 +1,4 @@
-#version 330 core
+#version 420 core
 
 out vec4 outColor;
 
@@ -21,9 +21,9 @@ vec3 Ke;
 
 //Propiedades de la luz
 vec3 Ia = vec3 (0.3);
-vec3 Id = vec3 (1.0);
+uniform vec3 Id;
 vec3 Is = vec3 (1.0);
-vec3 lpos = vec3 (0.0); 
+uniform vec3 lpos; 
 
 
 vec3 shade();
